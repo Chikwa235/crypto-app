@@ -14,7 +14,8 @@ export const cryptoApi = createApi({
 	baseQuery: fetchBaseQuery({ baseUrl }),
 	endpoints: (builder) => ({
 		getCryptos: builder.query({
-			query: () => createRequest('/coins')
+			query: (count) => createRequest(`/coins?limit=${count}`),
+
 		})
 	})
 });
@@ -36,15 +37,3 @@ export const {
 
 
 
-
-//const options = {
-	//method: 'GET',
-	//hostname: 'coinranking1.p.rapidapi.com',
-	//port: null,
-	//path: '/coins/trending?referenceCurrencyUuid=yhjMzLPhuIDl&timePeriod=24h&limit=50&offset=0',
-    //url: 'https://coinranking1.p.rapidapi.com/coins/trending?referenceCurrencyUuid=yhjMzLPhuIDl&timePeriod=24h&limit=50&offset=0' 
-	//headers: {
-//		'x-rapidapi-key': '03070f158bmshc347ce2af1df5d4p194278jsn73f0b5bb8442',
-//		'x-rapidapi-host': 'coinranking1.p.rapidapi.com'
-//	}
-//};
