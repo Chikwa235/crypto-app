@@ -17,28 +17,26 @@ export const cryptoNewsApi = createApi({
   baseQuery: fetchBaseQuery({ baseUrl }),
   endpoints: (builder) => ({
     getCryptoNews: builder.query({
-      query: ({ newsCategory = 'bitcoin', pageSize = 6 }) =>
-        createRequest(`/sources/${newsCategory}`),
+  query: ({ newsCategory = 'bitcoinmagazine', pageSize = 6 }) =>
+    createRequest(`/sources/${newsCategory}?limit=${pageSize}`), // <--- use /sources
+  transformResponse: (response) => {
+    console.log('API Response:', response);
+    const newsArray = Array.isArray(response) ? response : response.data || [];
+    return {
+      data: newsArray.map((item) => ({
+        title: item.title || 'No title',
+        description: item.description || 'No description',
+        url: item.link || '#',
+        image:
+          item.thumbnail ||
+          'https://images.pexels.com/photos/730564/pexels-photo-730564.jpeg',
+        publishedAt: item.pubDate || new Date().toISOString(),
+        source: item.sourceId || 'Unknown',
+      })),
+    };
+  },
+}),
 
-      // 🔑 Transform the API response into a usable format
-      transformResponse: (response) => {
-        console.log('API Response:', response); // DEBUG: see what comes from the API
-
-        // The API might return an array directly, so handle both cases
-        const newsArray = Array.isArray(response) ? response : response.data || [];
-
-        return {
-          data: newsArray.map((item) => ({
-            title: item.title,
-            description: item.description,
-            url: item.link,
-            image: item.thumbnail,
-            publishedAt: item.pubDate,
-            source: item.sourceId,
-          })),
-        };
-      },
-    }),
   }),
 });
 
