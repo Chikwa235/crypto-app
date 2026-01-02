@@ -13,6 +13,11 @@ const sources = [
   { id: 'bitcoinmagazine', name: 'Bitcoin Magazine' },
   { id: 'coindesk', name: 'CoinDesk' },
   { id: 'cointelegraph', name: 'CoinTelegraph' },
+  { id: 'decrypt', name: 'Decrypt' },
+  { id: 'theblock', name: 'The Block' },
+  { id: 'cryptoslate', name: 'CryptoSlate' },
+  { id: 'newsbtc', name: 'NewsBTC' },
+  { id: 'ambcrypto', name: 'AMBCrypto' },
 ];
 
 const News = ({ simplified }) => {
