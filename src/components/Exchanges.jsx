@@ -1,125 +1,66 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import millify from 'millify';
-import { Collapse, Row, Col, Typography, Avatar } from 'antd';
-import HTMLReactParser from 'html-react-parser';
+import { Collapse, Row, Col, Typography, Avatar, Spin, Alert } from 'antd';
 
 const { Text } = Typography;
 const { Panel } = Collapse;
 
-// Hardcoded exchange data (10+ exchanges) with valid logos
-
-const exchangesList = [
-  {
-    id: 'binance',
-    rank: 1,
-    name: 'Binance',
-    iconUrl: 'https://cryptologos.cc/logos/binance-coin-bnb-logo.png',
-    volume: 35000000000,
-    numberOfMarkets: 1200,
-    marketShare: 25.6,
-    description: `<p>Binance is one of the world's largest cryptocurrency exchanges. It offers a wide range of crypto trading pairs and advanced trading features.</p>`
-  },
-  {
-    id: 'coinbase',
-    rank: 2,
-    name: 'Coinbase',
-    iconUrl: 'https://cryptologos.cc/logos/coinbase-coin-logo.png', // ✅ direct image
-    volume: 12000000000,
-    numberOfMarkets: 500,
-    marketShare: 12.1,
-    description: `<p>Coinbase is a popular US-based exchange that is beginner-friendly and highly regulated. It supports many major cryptocurrencies.</p>`
-  },
-  {
-    id: 'kraken',
-    rank: 3,
-    name: 'Kraken',
-    iconUrl: 'https://cryptologos.cc/logos/kraken-kraken-logo.png', // ✅ direct image
-    volume: 8000000000,
-    numberOfMarkets: 400,
-    marketShare: 7.5,
-    description: `<p>Kraken is a trusted exchange known for its strong security features and wide range of crypto assets.</p>`
-  },
-  {
-    id: 'bitfinex',
-    rank: 4,
-    name: 'Bitfinex',
-    iconUrl: 'https://cryptologos.cc/logos/bitfinex-bfx-logo.png',
-    volume: 4500000000,
-    numberOfMarkets: 300,
-    marketShare: 5.2,
-    description: `<p>Bitfinex is known for advanced trading features and liquidity. It supports margin trading and many crypto assets.</p>`
-  },
-  {
-    id: 'bittrex',
-    rank: 5,
-    name: 'Bittrex',
-    iconUrl: 'https://cryptologos.cc/logos/bittrex-btx-logo.png',
-    volume: 3200000000,
-    numberOfMarkets: 280,
-    marketShare: 3.8,
-    description: `<p>Bittrex is a US-based exchange with a strong reputation for security and wide crypto asset support.</p>`
-  },
-  {
-    id: 'huobi',
-    rank: 6,
-    name: 'Huobi',
-    iconUrl: 'https://cryptologos.cc/logos/huobi-token-ht-logo.png',
-    volume: 2900000000,
-    numberOfMarkets: 260,
-    marketShare: 3.2,
-    description: `<p>Huobi is a global exchange offering spot and derivatives trading for a wide range of cryptocurrencies.</p>`
-  },
-  {
-    id: 'okex',
-    rank: 7,
-    name: 'OKEx',
-    iconUrl: 'https://cryptologos.cc/logos/okx-okb-logo.png',
-    volume: 2700000000,
-    numberOfMarkets: 240,
-    marketShare: 2.9,
-    description: `<p>OKEx is a major exchange providing spot, futures, and options trading across multiple crypto assets.</p>`
-  },
-  {
-    id: 'bitstamp',
-    rank: 8,
-    name: 'Bitstamp',
-    iconUrl: 'https://cryptologos.cc/logos/bitstamp-btc-logo.png',
-    volume: 2200000000,
-    numberOfMarkets: 180,
-    marketShare: 2.1,
-    description: `<p>Bitstamp is one of the oldest crypto exchanges, known for reliability and fiat-to-crypto trading pairs.</p>`
-  },
-  {
-    id: 'gemini',
-    rank: 9,
-    name: 'Gemini',
-    iconUrl: 'https://cryptologos.cc/logos/gemini-gem-logo.png',
-    volume: 1800000000,
-    numberOfMarkets: 150,
-    marketShare: 1.7,
-    description: `<p>Gemini is a US-regulated exchange that focuses on security and compliance, ideal for institutional traders.</p>`
-  },
-  {
-    id: 'kucoin',
-    rank: 10,
-    name: 'KuCoin',
-    iconUrl: 'https://cryptologos.cc/logos/kucoin-kcs-logo.png',
-    volume: 1300000000,
-    numberOfMarkets: 110,
-    marketShare: 1.2,
-    description: `<p>KuCoin is a global exchange known for a wide selection of altcoins and user-friendly interface.</p>`
-  }
-];
-
-
 const Exchanges = () => {
+  const [exchangesList, setExchangesList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState(null);
+
+  useEffect(() => {
+    const fetchExchanges = async () => {
+      try {
+        setLoading(true);
+        setErr(null);
+
+        // CoinGecko: real exchange data + logos
+        const res = await fetch(
+          'https://api.coingecko.com/api/v3/exchanges?per_page=10&page=1'
+        );
+        if (!res.ok) throw new Error(`Failed to fetch exchanges (HTTP ${res.status})`);
+
+        const data = await res.json();
+
+        // Normalize to your UI fields
+        const normalized = data.map((ex, idx) => ({
+          id: ex.id,
+          rank: ex.trust_score_rank ?? idx + 1,
+          name: ex.name,
+          iconUrl: ex.image, // reliable logos
+          volumeBtc24h: ex.trade_volume_24h_btc ?? null,
+          yearEstablished: ex.year_established ?? null,
+          country: ex.country ?? null,
+          url: ex.url ?? null,
+          description:
+            ex.description?.trim()
+              ? ex.description
+              : `<p>${ex.name} is a cryptocurrency exchange.</p>`,
+        }));
+
+        setExchangesList(normalized);
+      } catch (e) {
+        setErr(e?.message || 'Something went wrong');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchExchanges();
+  }, []);
+
+  if (loading) return <Spin />;
+  if (err) return <Alert type="error" message="Error loading exchanges" description={err} />;
+
   return (
     <>
       <Row style={{ fontWeight: 'bold', marginBottom: '1rem' }}>
-        <Col span={6}>Exchanges</Col>
-        <Col span={6}>24h Trade Volume</Col>
-        <Col span={6}>Markets</Col>
-        <Col span={6}>Change</Col>
+        <Col span={8}>Exchange</Col>
+        <Col span={6}>24h Volume (BTC)</Col>
+        <Col span={5}>Country</Col>
+        <Col span={5}>Established</Col>
       </Row>
 
       {exchangesList.map((exchange) => (
@@ -130,18 +71,47 @@ const Exchanges = () => {
                 showArrow={false}
                 header={
                   <Row align="middle">
-                    <Col span={6}>
-                      <Text><strong>{exchange.rank}. </strong></Text>
-                      <Avatar src={exchange.iconUrl} alt={exchange.name} style={{ marginRight: 8 }} />
-                      <Text><strong>{exchange.name}</strong></Text>
+                    <Col span={8}>
+                      <Text>
+                        <strong>{exchange.rank}. </strong>
+                      </Text>
+
+                      <Avatar
+                        src={exchange.iconUrl}
+                        alt={exchange.name}
+                        size={28}
+                        style={{ marginRight: 8 }}
+                        onError={() => true}
+                      >
+                        {exchange.name?.[0]}
+                      </Avatar>
+
+                      <Text>
+                        <strong>{exchange.name}</strong>
+                      </Text>
                     </Col>
-                    <Col span={6}>${millify(exchange.volume)}</Col>
-                    <Col span={6}>{millify(exchange.numberOfMarkets)}</Col>
-                    <Col span={6}>{millify(exchange.marketShare)}%</Col>
+
+                    <Col span={6}>
+                      {exchange.volumeBtc24h != null ? millify(exchange.volumeBtc24h) : '-'}
+                    </Col>
+
+                    <Col span={5}>{exchange.country || '-'}</Col>
+                    <Col span={5}>{exchange.yearEstablished || '-'}</Col>
                   </Row>
                 }
               >
-                {HTMLReactParser(exchange.description)}
+                {/* CoinGecko description may contain HTML; render safely as plain text */}
+                <div style={{ whiteSpace: 'pre-wrap' }}>
+                  {(exchange.description || '').replace(/<[^>]*>/g, '')}
+                </div>
+
+                {exchange.url ? (
+                  <div style={{ marginTop: 10 }}>
+                    <a href={exchange.url} target="_blank" rel="noreferrer">
+                      Visit exchange website
+                    </a>
+                  </div>
+                ) : null}
               </Panel>
             </Collapse>
           </Col>
