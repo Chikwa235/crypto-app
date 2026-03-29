@@ -5,7 +5,7 @@ import App from './App';
 import { BrowserRouter } from 'react-router-dom';
 import { Provider } from 'react-redux'; // ✅ CAPITAL P
 import store from './app/store';
-import 'antd/dist/antd.css';
+import "antd/dist/reset.css";
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
