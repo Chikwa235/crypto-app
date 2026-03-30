@@ -1,11 +1,19 @@
+
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+
+/**
+ * RapidAPI: "Cryptocurrency News" (v1)
+ * Host: cryptocurrency-news2.p.rapidapi.com
+ * Base URL: https://cryptocurrency-news2.p.rapidapi.com
+ * Endpoints look like: /v1/coinjournal, /v1/coindesk, /v1/cointelegraph, etc.
+ */
 
 const cryptoNewsHeaders = {
   'x-rapidapi-key': process.env.REACT_APP_RAPIDAPI_KEY,
-  'x-rapidapi-host': 'cryptocurrency-news-api2.p.rapidapi.com',
+  'x-rapidapi-host': 'cryptocurrency-news2.p.rapidapi.com',
 };
 
-const baseUrl = 'https://cryptocurrency-news-api2.p.rapidapi.com';
+const baseUrl = 'https://cryptocurrency-news2.p.rapidapi.com';
 
 const createRequest = (url) => ({
   url,
@@ -23,40 +31,58 @@ const microlinkImage = (url) => {
   return `https://image.microlink.io/${encodeURIComponent(url)}`;
 };
 
+// Normalize each article defensively (different sources sometimes vary)
+const normalizeItem = (item) => {
+  const url = item?.url || item?.link || '#';
+
+  const image =
+    (isNonEmptyString(item?.thumbnail) && item.thumbnail) ||
+    (isNonEmptyString(item?.image) && item.image) ||
+    microlinkImage(url) ||
+    DEMO_IMAGE;
+
+  return {
+    title: item?.title || 'No title',
+    description: item?.description || item?.content || 'No description',
+    url,
+    image,
+    publishedAt: item?.createdAt || item?.pubDate || item?.publishedAt || '',
+    source:
+      item?.source ||
+      item?.sourceId ||
+      item?.source_id ||
+      item?.provider ||
+      'Unknown',
+  };
+};
+
 export const cryptoNewsApi = createApi({
   reducerPath: 'cryptoNewsApi',
   baseQuery: fetchBaseQuery({ baseUrl }),
   endpoints: (builder) => ({
     getCryptoNews: builder.query({
-      query: ({ newsCategory = 'bitcoinmagazine', pageSize = 6 }) =>
-        createRequest(`/sources/${newsCategory}?limit=${pageSize}`),
+      // newsCategory examples: coinjournal, coindesk, cointelegraph, decrypt, bitcoinmagazine, etc.
+      // NOTE: This API generally does NOT support `limit`; we do slicing client-side.
+      query: ({ newsCategory = 'coinjournal', pageSize = 6 }) =>
+        createRequest(`/v1/${newsCategory}`),
 
-      transformResponse: (response) => {
-        console.log('API Response:', response);
+      transformResponse: (response, _meta, arg) => {
+        const pageSize = Number(arg?.pageSize ?? 6);
 
-        const newsArray = Array.isArray(response) ? response : response.data || [];
+        // This API returns: { data: [...] }
+        const newsArray = Array.isArray(response)
+          ? response
+          : Array.isArray(response?.data)
+            ? response.data
+            : [];
+
+        const normalized = newsArray.map(normalizeItem);
 
         return {
-          data: newsArray.map((item) => {
-            const url = item.link || item.url || '#';
-
-            // Use thumbnail if present; otherwise use a per-article preview image; otherwise demo
-            const image =
-              (isNonEmptyString(item.thumbnail) && item.thumbnail) ||
-              microlinkImage(url) ||
-              DEMO_IMAGE;
-
-            return {
-              title: item.title || 'No title',
-              description: item.description || item.content || 'No description',
-              url,
-              image,
-              publishedAt: item.pubDate || item.publishedAt || new Date().toISOString(),
-
-              // Your API objects show `source: "bitcoinmagazine"` in the console
-              source: item.source || item.sourceId || item.source_id || 'Unknown',
-            };
-          }),
+          data:
+            Number.isFinite(pageSize) && pageSize > 0
+              ? normalized.slice(0, pageSize)
+              : normalized,
         };
       },
     }),
