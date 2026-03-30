@@ -2,7 +2,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
 const cryptoNewsHeaders = {
   'x-rapidapi-key': process.env.REACT_APP_RAPIDAPI_KEY,
-  'x-rapidapi-host': process.env.REACT_APP_RAPIDAPI_NEWS_HOST,
+  'x-rapidapi-host': 'cryptocurrency-news-api2.p.rapidapi.com',
 };
 
 const baseUrl = 'https://cryptocurrency-news-api2.p.rapidapi.com';
