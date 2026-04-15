@@ -1,11 +1,10 @@
-
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
 /**
  * RapidAPI: "Cryptocurrency News" (v1)
  * Host: cryptocurrency-news2.p.rapidapi.com
  * Base URL: https://cryptocurrency-news2.p.rapidapi.com
- * Endpoints look like: /v1/coinjournal, /v1/coindesk, /v1/cointelegraph, etc.
+ * Endpoints: /v1/coinjournal, /v1/coindesk, /v1/cointelegraph, /v1/bitcoinmagazine, etc.
  */
 
 const cryptoNewsHeaders = {
@@ -31,9 +30,31 @@ const microlinkImage = (url) => {
   return `https://image.microlink.io/${encodeURIComponent(url)}`;
 };
 
-// Normalize each article defensively (different sources sometimes vary)
-const normalizeItem = (item) => {
-  const url = item?.url || item?.link || '#';
+// ---- Source helpers ----
+const titleCase = (str) =>
+  String(str || '')
+    .replace(/[-_]/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .trim();
+
+const sourceFromUrl = (url) => {
+  try {
+    if (!isNonEmptyString(url)) return '';
+    // Only attempt URL parsing if it looks like an absolute URL
+    if (!/^https?:\/\//i.test(url)) return '';
+
+    const host = new URL(url).hostname.replace('www.', '');
+    const root = host.split('.')[0] || '';
+    return root ? titleCase(root) : '';
+  } catch {
+    return '';
+  }
+};
+
+// Normalize each article defensively
+const normalizeItem = (item, fallbackSource = '') => {
+  const urlRaw = item?.url || item?.link || '';
+  const url = isNonEmptyString(urlRaw) ? urlRaw : '#';
 
   const image =
     (isNonEmptyString(item?.thumbnail) && item.thumbnail) ||
@@ -41,18 +62,26 @@ const normalizeItem = (item) => {
     microlinkImage(url) ||
     DEMO_IMAGE;
 
+  const sourceRaw =
+    item?.source ||
+    item?.sourceId ||
+    item?.source_id ||
+    item?.provider ||
+    '';
+
+  const source =
+    (isNonEmptyString(sourceRaw) && titleCase(sourceRaw)) ||
+    sourceFromUrl(url) ||
+    (isNonEmptyString(fallbackSource) && titleCase(fallbackSource)) ||
+    'Unknown';
+
   return {
     title: item?.title || 'No title',
     description: item?.description || item?.content || 'No description',
     url,
     image,
     publishedAt: item?.createdAt || item?.pubDate || item?.publishedAt || '',
-    source:
-      item?.source ||
-      item?.sourceId ||
-      item?.source_id ||
-      item?.provider ||
-      'Unknown',
+    source,
   };
 };
 
@@ -61,13 +90,12 @@ export const cryptoNewsApi = createApi({
   baseQuery: fetchBaseQuery({ baseUrl }),
   endpoints: (builder) => ({
     getCryptoNews: builder.query({
-      // newsCategory examples: coinjournal, coindesk, cointelegraph, decrypt, bitcoinmagazine, etc.
-      // NOTE: This API generally does NOT support `limit`; we do slicing client-side.
       query: ({ newsCategory = 'coinjournal', pageSize = 6 }) =>
         createRequest(`/v1/${newsCategory}`),
 
       transformResponse: (response, _meta, arg) => {
         const pageSize = Number(arg?.pageSize ?? 6);
+        const newsCategory = arg?.newsCategory ?? 'coinjournal';
 
         // This API returns: { data: [...] }
         const newsArray = Array.isArray(response)
@@ -76,7 +104,8 @@ export const cryptoNewsApi = createApi({
             ? response.data
             : [];
 
-        const normalized = newsArray.map(normalizeItem);
+        // Pass the category as a fallback source so UI never becomes "Unknown"
+        const normalized = newsArray.map((it) => normalizeItem(it, newsCategory));
 
         return {
           data:

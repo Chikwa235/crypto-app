@@ -7,7 +7,10 @@ A modern cryptocurrency dashboard that shows **global market stats**, **top cryp
 ## Demo
 
 - **Live Demo:** https://crypto-app-19.vercel.app/
-- **Screenshots:** _Add screenshots/GIFs here_
+- **Screenshots:** 
+![Home](screenshots/Home.png)
+![Details](screenshots/Details.png)
+![News](screenshots/News.png)
 
 ---
 

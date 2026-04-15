@@ -36,19 +36,35 @@ const faviconFromUrl = (url) => {
   }
 };
 
-// Normalize each article regardless of whether API uses (thumbnail/link/pubDate) or (image/url/publishedAt)
+const sourceFromUrl = (url) => {
+  try {
+    const host = new URL(url).hostname.replace('www.', '');
+    const root = host.split('.')[0] || '';
+    return root ? root.charAt(0).toUpperCase() + root.slice(1) : '';
+  } catch {
+    return '';
+  }
+};
+
+// Since cryptoNewsApi already normalizes items into { title, description, url, image, publishedAt, source }
+// we only do a small defensive normalization here.
 const normalizeArticle = (raw) => {
   const url = raw?.url || raw?.link || '';
-  const publishedAt = raw?.publishedAt || raw?.pubDate || '';
+  const publishedAt = raw?.publishedAt || raw?.pubDate || raw?.createdAt || '';
   const image =
     (nonEmptyString(raw?.image) && raw.image) ||
     (nonEmptyString(raw?.thumbnail) && raw.thumbnail) ||
     null;
 
+  const source =
+    (nonEmptyString(raw?.source) && raw.source) ||
+    sourceFromUrl(url) ||
+    'Unknown';
+
   return {
     title: raw?.title || '',
     description: raw?.description || raw?.content || '',
-    source: raw?.source || raw?.source_id || raw?.provider || '',
+    source,
     url,
     publishedAt,
     image,
@@ -107,9 +123,7 @@ const News = ({ simplified }) => {
         {displayArticles.map((news, idx) => {
           const favicon = news.url ? faviconFromUrl(news.url) : null;
 
-          // cover fallback chain: article image -> demo
           const coverSrc = (isHttpUrl(news.image) && news.image) || demoImage;
-
           const providerAvatar = favicon || demoImage;
 
           return (
@@ -149,7 +163,9 @@ const News = ({ simplified }) => {
                         e.currentTarget.src = demoImage;
                       }}
                     />
-                    <Text className="provider-name">{news.source || 'source'}</Text>
+                    {/* ✅ Source name will always show */}
+                    <Text className="provider-name">{news.source}</Text>
+
                     <Text type="secondary">
                       {news.publishedAt ? moment(news.publishedAt).fromNow() : ''}
                     </Text>
